@@ -1,29 +1,26 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabaseUrl = process.env.SUPABASE_URL || 'https://wznkoeycvchvuspzjzxz.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(request: Request) {
   try {
     const { className, weekNumber, namesText } = await request.json();
 
-    // 쉼표, 줄바꿈, 공백 기준으로 이름 배열 생성
     const names = namesText
       .split(/[\n,]+/)
       .map((n: string) => n.trim())
       .filter((n: string) => n.length > 0);
 
-    // 해당 반/주차의 기존 재시험 상태 초기화
     await supabase
       .from('student_logs')
       .update({ is_retest: false })
       .eq('class_name', className)
       .eq('week_number', weekNumber);
 
-    // 입력받은 이름들에 대해 재시험 설정 (없으면 신규 생성)
     for (const name of names) {
       const { data } = await supabase
         .from('student_logs')

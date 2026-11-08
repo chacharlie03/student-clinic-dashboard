@@ -3,10 +3,10 @@ import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabaseUrl = process.env.SUPABASE_URL || 'https://wznkoeycvchvuspzjzxz.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const CLASSES = ['중대1(금)', '중대1(토)', '중산1(토)', '중산1(일)'];
 const WEEKS = [1, 2, 3, 4, 5, 6];
@@ -18,22 +18,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '스프레드시트 ID가 필요합니다.' }, { status: 400 });
     }
 
+    const googleKeyJson = process.env.GOOGLE_SERVICE_KEY
+      ? JSON.parse(process.env.GOOGLE_SERVICE_KEY)
+      : require(path.join(process.cwd(), 'google-key.json'));
+
     const auth = new google.auth.GoogleAuth({
-      keyFile: path.join(process.cwd(), 'google-key.json'),
+      credentials: {
+        client_email: googleKeyJson.client_email,
+        private_key: googleKeyJson.private_key,
+      },
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     });
+
     const sheets = google.sheets({ version: 'v4', auth });
 
     const spreadsheetInfo = await sheets.spreadsheets.get({ spreadsheetId });
     const existingSheetTitles = (spreadsheetInfo.data.sheets || [])
-      .map(s => s.properties?.title)
+      .map((s) => s.properties?.title)
       .filter((title): title is string => Boolean(title));
 
-    // 기존 수기 입력 데이터(일정, 재시험여부) 백업
     const { data: existingLogs } = await supabase.from('student_logs').select('*');
     const existingMap = new Map<string, { is_retest: boolean; schedule: string }>();
     if (existingLogs) {
-      existingLogs.forEach(item => {
+      existingLogs.forEach((item) => {
         const key = `${item.class_name}_${item.week_number}_${item.student_name}`;
         existingMap.set(key, { is_retest: item.is_retest, schedule: item.clinic_schedule || '' });
       });
@@ -65,7 +72,6 @@ export async function POST(request: Request) {
 
             const totalScore = taskA + taskB + taskC;
 
-            // 기존 백업값 불러오기
             const backupKey = `${className}_${week}_${name}`;
             const backup = existingMap.get(backupKey);
 
