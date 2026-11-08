@@ -3,8 +3,15 @@ import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
 
 function getSupabase() {
-  const supabaseUrl = process.env.SUPABASE_URL || 'https://wznkoeycvchvuspzjzxz.supabase.co';
-  const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    'https://wznkoeycvchvuspzjzxz.supabase.co';
+  const supabaseKey =
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
+
   return createClient(supabaseUrl, supabaseKey);
 }
 
