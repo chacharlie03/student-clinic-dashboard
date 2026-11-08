@@ -1,26 +1,35 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
-import path from 'path';
 
-const supabaseUrl = process.env.SUPABASE_URL || 'https://wznkoeycvchvuspzjzxz.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+function getSupabase() {
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://wznkoeycvchvuspzjzxz.supabase.co';
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 const CLASSES = ['중대1(금)', '중대1(토)', '중산1(토)', '중산1(일)'];
 const WEEKS = [1, 2, 3, 4, 5, 6];
 
 export async function POST(request: Request) {
   try {
+    const supabase = getSupabase();
     const { spreadsheetId } = await request.json();
     if (!spreadsheetId) {
       return NextResponse.json({ error: '스프레드시트 ID가 필요합니다.' }, { status: 400 });
     }
 
-    const googleKeyJson = process.env.GOOGLE_SERVICE_KEY
-      ? JSON.parse(process.env.GOOGLE_SERVICE_KEY)
-      : require(path.join(process.cwd(), 'google-key.json'));
+    let googleKeyJson: any;
+    if (process.env.GOOGLE_SERVICE_KEY) {
+      googleKeyJson = JSON.parse(process.env.GOOGLE_SERVICE_KEY);
+    } else {
+      try {
+        const path = await import('path');
+        googleKeyJson = require(path.join(process.cwd(), 'google-key.json'));
+      } catch (e) {
+        throw new Error('Google Service Key가 설정되지 않았습니다.');
+      }
+    }
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
