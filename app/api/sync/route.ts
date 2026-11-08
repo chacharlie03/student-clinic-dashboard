@@ -2,17 +2,26 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
 
-function getSupabase() {
-  const supabaseUrl =
-    process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    'https://wznkoeycvchvuspzjzxz.supabase.co';
-  const supabaseKey =
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
+// 예외 상황 발생 시 동작할 하드코딩 Fallback URL/Key
+const DEFAULT_URL = 'https://wznkoeycvchvuspzjzxz.supabase.co';
+const DEFAULT_KEY = 'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
 
-  return createClient(supabaseUrl, supabaseKey);
+function getSupabase() {
+  let url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL;
+  let key = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_KEY;
+
+  // 문자열 양끝 따옴표 및 공백 제거
+  if (typeof url === 'string') url = url.trim().replace(/^["']|["']$/g, '');
+  if (typeof key === 'string') key = key.trim().replace(/^["']|["']$/g, '');
+
+  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    url = DEFAULT_URL;
+  }
+  if (!key) {
+    key = DEFAULT_KEY;
+  }
+
+  return createClient(url, key);
 }
 
 const CLASSES = ['중대1(금)', '중대1(토)', '중산1(토)', '중산1(일)'];
@@ -28,20 +37,37 @@ export async function POST(request: Request) {
 
     let googleKeyJson: any;
     if (process.env.GOOGLE_SERVICE_KEY) {
-      googleKeyJson = JSON.parse(process.env.GOOGLE_SERVICE_KEY);
+      try {
+        googleKeyJson = typeof process.env.GOOGLE_SERVICE_KEY === 'string'
+          ? JSON.parse(process.env.GOOGLE_SERVICE_KEY)
+          : process.env.GOOGLE_SERVICE_KEY;
+      } catch (e) {
+        return NextResponse.json(
+          { error: 'Vercel 환경 변수의 GOOGLE_SERVICE_KEY JSON 파싱에 실패했습니다.' },
+          { status: 500 }
+        );
+      }
     } else {
       try {
         const path = await import('path');
         googleKeyJson = require(path.join(process.cwd(), 'google-key.json'));
       } catch (e) {
-        throw new Error('Google Service Key가 설정되지 않았습니다.');
+        return NextResponse.json(
+          { error: 'Google Service Key를 찾을 수 없습니다. Vercel 환경 변수를 확인하세요.' },
+          { status: 500 }
+        );
       }
     }
+
+    // Google Private Key 내의 \n 이스케이프 문자 처리
+    const privateKey = googleKeyJson.private_key
+      ? googleKeyJson.private_key.replace(/\\n/g, '\n')
+      : undefined;
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: googleKeyJson.client_email,
-        private_key: googleKeyJson.private_key,
+        private_key: privateKey,
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     });
