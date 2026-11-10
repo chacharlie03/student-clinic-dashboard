@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 const CLASSES = ['중대1(금)', '중대1(토)', '중산1(토)', '중산1(일)'];
-const SCHEDULE_OPTIONS = ['수업 후', '토 10시', '목 4시'];
+const SCHEDULE_OPTIONS = ['수업 후', '토요일 10시', '목 4시'];
 
 export default function Dashboard() {
   const [spreadsheetId, setSpreadsheetId] = useState('');
