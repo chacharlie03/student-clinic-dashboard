@@ -212,9 +212,9 @@ export default function Dashboard() {
         {/* 상단 컨트롤 바 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 text-white p-5 rounded-xl shadow-lg">
           <div>
-            <h1 className="text-xl font-bold">주차별 전 반 조건 대상자 집계 대시보드</h1>
+            <h1 className="text-xl font-bold">김정화T 테스트 결과 및 클리닉 명단</h1>
             <p className="text-xs text-slate-400 mt-1">
-              선택된 반의 대상자 명단이 오름차순으로 정렬되어 깔끔하게 표시됩니다.
+              김정화T 명단 프로그램 made by 차찰리.
             </p>
           </div>
           <div className="flex gap-2">
