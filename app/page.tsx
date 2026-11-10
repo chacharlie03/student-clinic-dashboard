@@ -107,22 +107,25 @@ export default function Dashboard() {
   // 현재 선택된 반의 logs
   const classLogs = logs.filter((l) => l.class_name === selectedClass);
 
-  // 각 조건별 학생 명단 추출 및 가나다(오름차순) 정렬
+  // 1. 테스트 미달 (재시험 대상자)
   const retestNames = classLogs
     .filter((l) => l.is_retest)
     .map((l) => l.student_name)
     .sort((a, b) => a.localeCompare(b, 'ko'));
 
+  // 2. 복습 미달 (복습과제 미수행 단독)
   const hwMissingNames = classLogs
     .filter((l) => l.is_hw_missing)
     .map((l) => l.student_name)
     .sort((a, b) => a.localeCompare(b, 'ko'));
 
+  // 3. 필수 미달 (필수과제 미달)
   const reqHwMissingNames = classLogs
     .filter((l) => l.is_req_hw_missing)
     .map((l) => l.student_name)
     .sort((a, b) => a.localeCompare(b, 'ko'));
 
+  // 4. 복습 대상 (★교집합: 복습 과제 미수행 AND 재시험 대상자)
   const hwRemediationNames = classLogs
     .filter((l) => l.is_hw_missing && l.is_retest)
     .map((l) => l.student_name)
@@ -178,7 +181,7 @@ export default function Dashboard() {
             margin: 15mm;
           }
 
-          /* 각 명단 구분 시 페이지 분리 (명단이 넘치면 넘치는 대로 여러 장 출력) */
+          /* 각 명단 섹션 사이 페이지 분리 */
           .print-section {
             page-break-before: always;
             break-before: page;
@@ -379,7 +382,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ────────────────── 2. 교실 게시용 미니멀 인쇄 레이아웃 (print-only) ────────────────── */}
+      {/* ────────────────── 2. 교실 게시용 인쇄 레이아웃 (print-only) ────────────────── */}
       <div className="print-only">
         {/* SECTION 1: 테스트 미달 */}
         <section className="print-section">
@@ -433,19 +436,19 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* SECTION 3: 복습 과제 미수행 */}
+        {/* SECTION 3: 복습 대상 (★교집합: 복습 과제 미수행 & 재시험 대상자) */}
         <section className="print-section">
           <div className="border-b-4 border-black pb-4 mb-8 text-center">
-            <h1 className="text-6xl font-black tracking-tight">복습 과제 미수행</h1>
+            <h1 className="text-6xl font-black tracking-tight">복습 대상</h1>
           </div>
           <div>
-            {hwMissingNames.length === 0 ? (
+            {hwRemediationNames.length === 0 ? (
               <div className="py-20 text-center text-4xl font-bold text-gray-400">
                 대상 없음
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-y-6 gap-x-12">
-                {hwMissingNames.map((name, i) => (
+                {hwRemediationNames.map((name, i) => (
                   <div
                     key={i}
                     className="print-name-item border-b-2 border-black py-2 text-center font-extrabold"
