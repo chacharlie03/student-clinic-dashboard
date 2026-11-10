@@ -125,7 +125,7 @@ export default function Dashboard() {
     .map((l) => l.student_name)
     .sort((a, b) => a.localeCompare(b, 'ko'));
 
-  // 4. 복습 대상 (★교집합: 복습 과제 미수행 AND 재시험 대상자)
+  // 4. 복습 대상 (교집합: 복습 과제 미수행 AND 재시험 대상자)
   const hwRemediationNames = classLogs
     .filter((l) => l.is_hw_missing && l.is_retest)
     .map((l) => l.student_name)
@@ -178,7 +178,7 @@ export default function Dashboard() {
 
           @page {
             size: A4 portrait;
-            margin: 15mm;
+            margin: 12mm 15mm;
           }
 
           /* 각 명단 섹션 사이 페이지 분리 */
@@ -192,10 +192,13 @@ export default function Dashboard() {
             break-before: avoid;
           }
 
-          /* 이름 요소 중간에 끊기지 않도록 방지 */
+          /* 인쇄용 이름 요소 높이 0.7배 축소 조절 */
           .print-name-item {
             break-inside: avoid;
             page-break-inside: avoid;
+            padding-top: 2px !important;
+            padding-bottom: 2px !important;
+            line-height: 0.9 !important;
           }
         }
 
@@ -307,21 +310,21 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* 대시보드 표 */}
+          {/* 대시보드 표 (웹 UI 셀 높이 0.7배 축소 반영) */}
           <div className="border rounded-lg overflow-x-auto shadow-inner">
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="border-b text-slate-700 font-bold">
-                  <th className="p-3 border-r bg-slate-50 w-1/6">테스트 미달</th>
-                  <th className="p-3 border-r bg-slate-50 w-1/6">복습 미달</th>
-                  <th className="p-3 border-r bg-slate-50 w-1/6">필수 미달</th>
-                  <th className="p-3 border-r bg-blue-100 text-blue-900 w-1/6">
+                  <th className="py-1.5 px-3 border-r bg-slate-50 w-1/6">테스트 미달</th>
+                  <th className="py-1.5 px-3 border-r bg-slate-50 w-1/6">복습 미달</th>
+                  <th className="py-1.5 px-3 border-r bg-slate-50 w-1/6">필수 미달</th>
+                  <th className="py-1.5 px-3 border-r bg-blue-100 text-blue-900 w-1/6">
                     복습 대상 ⭐
                   </th>
-                  <th className="p-3 border-r bg-rose-100 text-rose-900 w-1/6">
+                  <th className="py-1.5 px-3 border-r bg-rose-100 text-rose-900 w-1/6">
                     클리닉 대상 ⭐
                   </th>
-                  <th className="p-3 bg-amber-100 text-amber-900 w-1/6">
+                  <th className="py-1.5 px-3 bg-amber-100 text-amber-900 w-1/6">
                     일정 (선택) ⭐
                   </th>
                 </tr>
@@ -329,7 +332,7 @@ export default function Dashboard() {
               <tbody className="align-top divide-y">
                 {maxRows === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-10 text-center text-gray-400 font-medium">
+                    <td colSpan={6} className="py-6 px-3 text-center text-gray-400 font-medium">
                       해당 주차/반에 조건 대상자가 없습니다.
                     </td>
                   </tr>
@@ -339,25 +342,25 @@ export default function Dashboard() {
 
                     return (
                       <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="p-2.5 border-r font-medium text-purple-700 bg-purple-50/30">
+                        <td className="py-1 px-2.5 border-r font-medium text-purple-700 bg-purple-50/30 leading-tight">
                           {retestNames[idx] || ''}
                         </td>
-                        <td className="p-2.5 border-r font-medium text-orange-700 bg-orange-50/30">
+                        <td className="py-1 px-2.5 border-r font-medium text-orange-700 bg-orange-50/30 leading-tight">
                           {hwMissingNames[idx] || ''}
                         </td>
-                        <td className="p-2.5 border-r font-medium text-red-700 bg-red-50/30">
+                        <td className="py-1 px-2.5 border-r font-medium text-red-700 bg-red-50/30 leading-tight">
                           {reqHwMissingNames[idx] || ''}
                         </td>
-                        <td className="p-2.5 border-r font-bold text-blue-800 bg-blue-50/80">
+                        <td className="py-1 px-2.5 border-r font-bold text-blue-800 bg-blue-50/80 leading-tight">
                           {hwRemediationNames[idx] || ''}
                         </td>
-                        <td className="p-2.5 border-r font-bold text-rose-800 bg-rose-50/80">
+                        <td className="py-1 px-2.5 border-r font-bold text-rose-800 bg-rose-50/80 leading-tight">
                           {clinicStudent ? clinicStudent.student_name : ''}
                         </td>
-                        <td className="p-1.5 bg-amber-50/60">
+                        <td className="py-0.5 px-1 bg-amber-50/60">
                           {clinicStudent && (
                             <select
-                              className="w-full p-1.5 border border-amber-300 rounded text-xs bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                              className="w-full py-0.5 px-1 border border-amber-300 rounded text-xs bg-white text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                               value={clinicStudent.clinic_schedule || ''}
                               onChange={(e) =>
                                 handleScheduleChange(clinicStudent.id, e.target.value)
@@ -386,7 +389,7 @@ export default function Dashboard() {
       <div className="print-only">
         {/* SECTION 1: 테스트 미달 */}
         <section className="print-section">
-          <div className="border-b-4 border-black pb-4 mb-8 text-center">
+          <div className="border-b-4 border-black pb-4 mb-6 text-center">
             <h1 className="text-6xl font-black tracking-tight">테스트 미달</h1>
           </div>
           <div>
@@ -395,12 +398,12 @@ export default function Dashboard() {
                 대상 없음
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-y-6 gap-x-12">
+              <div className="grid grid-cols-2 gap-y-3 gap-x-12">
                 {retestNames.map((name, i) => (
                   <div
                     key={i}
-                    className="print-name-item border-b-2 border-black py-2 text-center font-extrabold"
-                    style={{ fontSize: '75px', lineHeight: '1.2' }}
+                    className="print-name-item border-b-2 border-black py-0.5 text-center font-extrabold"
+                    style={{ fontSize: '75px', lineHeight: '0.9' }}
                   >
                     {name}
                   </div>
@@ -412,7 +415,7 @@ export default function Dashboard() {
 
         {/* SECTION 2: 필수 과제 미달 */}
         <section className="print-section">
-          <div className="border-b-4 border-black pb-4 mb-8 text-center">
+          <div className="border-b-4 border-black pb-4 mb-6 text-center">
             <h1 className="text-6xl font-black tracking-tight">필수 과제 미달</h1>
           </div>
           <div>
@@ -421,12 +424,12 @@ export default function Dashboard() {
                 대상 없음
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-y-6 gap-x-12">
+              <div className="grid grid-cols-2 gap-y-3 gap-x-12">
                 {reqHwMissingNames.map((name, i) => (
                   <div
                     key={i}
-                    className="print-name-item border-b-2 border-black py-2 text-center font-extrabold"
-                    style={{ fontSize: '75px', lineHeight: '1.2' }}
+                    className="print-name-item border-b-2 border-black py-0.5 text-center font-extrabold"
+                    style={{ fontSize: '75px', lineHeight: '0.9' }}
                   >
                     {name}
                   </div>
@@ -436,9 +439,9 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* SECTION 3: 복습 대상 (★교집합: 복습 과제 미수행 & 재시험 대상자) */}
+        {/* SECTION 3: 복습 대상 */}
         <section className="print-section">
-          <div className="border-b-4 border-black pb-4 mb-8 text-center">
+          <div className="border-b-4 border-black pb-4 mb-6 text-center">
             <h1 className="text-6xl font-black tracking-tight">복습 대상</h1>
           </div>
           <div>
@@ -447,12 +450,12 @@ export default function Dashboard() {
                 대상 없음
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-y-6 gap-x-12">
+              <div className="grid grid-cols-2 gap-y-3 gap-x-12">
                 {hwRemediationNames.map((name, i) => (
                   <div
                     key={i}
-                    className="print-name-item border-b-2 border-black py-2 text-center font-extrabold"
-                    style={{ fontSize: '75px', lineHeight: '1.2' }}
+                    className="print-name-item border-b-2 border-black py-0.5 text-center font-extrabold"
+                    style={{ fontSize: '75px', lineHeight: '0.9' }}
                   >
                     {name}
                   </div>
