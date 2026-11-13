@@ -19,13 +19,44 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
 
-  // 일정 드롭다운 옵션 상태
+  // 일정 드롭다운 옵션 상태 (Supabase DB 연동)
   const [scheduleOptions, setScheduleOptions] = useState<string[]>(DEFAULT_SCHEDULE_OPTIONS);
   const [isOptionModalOpen, setIsOptionModalOpen] = useState(false);
 
   // 재시험 명단 복사-붙여넣기 팝업 상태
   const [retestInputClass, setRetestInputClass] = useState<string | null>(null);
   const [retestText, setRetestText] = useState('');
+
+  // DB에서 일정 옵션 불러오기
+  const fetchScheduleOptions = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      if (Array.isArray(data.options) && data.options.length > 0) {
+        setScheduleOptions(data.options);
+      }
+    } catch (e) {
+      console.error('Failed to fetch schedule options:', e);
+    }
+  };
+
+  // DB에 일정 옵션 저장하기
+  const handleSaveScheduleOptions = async (newOptions: string[]) => {
+    setScheduleOptions(newOptions);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ options: newOptions }),
+      });
+      if (!res.ok) {
+        alert('일정 항목 DB 저장에 실패했습니다.');
+      }
+    } catch (e) {
+      console.error('Failed to save schedule options:', e);
+      alert('일정 항목 저장 중 오류가 발생했습니다.');
+    }
+  };
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -38,6 +69,10 @@ export default function Dashboard() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchScheduleOptions();
+  }, []);
 
   useEffect(() => {
     fetchLogs();
@@ -313,7 +348,7 @@ export default function Dashboard() {
       {isOptionModalOpen && (
         <ScheduleOptionModal
           options={scheduleOptions}
-          onSave={(newOpts) => setScheduleOptions(newOpts)}
+          onSave={handleSaveScheduleOptions}
           onClose={() => setIsOptionModalOpen(false)}
         />
       )}
