@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { google } from 'googleapis';
 
 const DEFAULT_URL = 'https://wznkoeycvchvuspzjzxz.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_E2mkgGdDmJ-gMf8uEGmL3w_261Gut2a';
@@ -21,23 +20,6 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-function getGoogleSheetsClient() {
-  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-  if (!clientEmail || !privateKey) {
-    throw new Error('Google Service Account 환경변수(GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY)가 누락되었습니다.');
-  }
-
-  const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
-
-  return google.sheets({ version: 'v4', auth });
-}
-
 // 빈칸/공백/비숫자(결석 등) 여부를 엄격하게 걸러내는 숫자 파서
 function parseValidScore(val: unknown): number | null {
   if (val === undefined || val === null) return null;
@@ -55,7 +37,6 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabase();
-    const sheets = getGoogleSheetsClient();
 
     // 1. 기존 DB에 저장된 수기 입력 데이터(일정, 확정 상태, 재시험 여부) 백업 조회
     const { data: existingLogs, error: fetchError } = await supabase
@@ -80,39 +61,43 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. 스프레드시트 메타데이터에서 실제 시트 탭 목록 조회
-    const meta = await sheets.spreadsheets.get({ spreadsheetId });
-    const sheetTitles = new Set(
-      meta.data.sheets?.map((s) => s.properties?.title).filter(Boolean) as string[]
-    );
-
     const newRecords: any[] = [];
 
+    // 2. 공개 구글 시트 gviz JSON 엔드포인트로 시트별 데이터 조회
     for (const className of CLASSES) {
       for (const week of WEEKS) {
         const targetSheetName = `${className} ${week}주차`;
-        if (!sheetTitles.has(targetSheetName)) continue;
+        const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(
+          targetSheetName
+        )}`;
 
-        const res = await sheets.spreadsheets.values.get({
-          spreadsheetId,
-          range: `'${targetSheetName}'!A2:Z100`,
-        });
+        const res = await fetch(url);
+        if (!res.ok) continue;
 
-        const rows = res.data.values || [];
-        for (const row of rows) {
+        const text = await res.text();
+        const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
+        if (!jsonMatch) continue;
+
+        const parsed = JSON.parse(jsonMatch[1]);
+        if (parsed.status === 'error') continue;
+
+        const rows = parsed.table?.rows || [];
+
+        for (const rowObj of rows) {
+          const cells = rowObj.c || [];
           // B열(index 1): 학생 이름
-          const studentName = (row[1] || '').trim();
-          if (!studentName) continue;
+          const studentName = (cells[1]?.v ?? '').toString().trim();
+          if (!studentName || studentName === '이름' || studentName === '학생명') continue;
 
           // J열(index 9): 복습과제 점수, K열(index 10): 필수과제 점수
-          const hwScore = parseValidScore(row[9]);
-          const reqHwScore = parseValidScore(row[10]);
+          const hwScore = parseValidScore(cells[9]?.v);
+          const reqHwScore = parseValidScore(cells[10]?.v);
 
-          // 빈칸(null)이나 문자("결석" 등)는 결석이므로 제외하고, 유효 숫자가 있을 때만 미달 판정
+          // 빈칸(null)이나 문자("결석" 등)는 제외하고, 유효 숫자가 있을 때만 미달 판정
           const isHwMissing = hwScore !== null && hwScore === 0;
           const isReqHwMissing = reqHwScore !== null && reqHwScore < 18;
 
-          // 3. 기존 백업 데이터와 병합 (확정 상태, 일정, 재시험 여부 유지)
+          // 3. 기존 백업 데이터와 병합
           const key = `${className}_${week}_${studentName}`;
           const saved = preservedMap.get(key);
 
@@ -130,18 +115,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. 기존 데이터 교체 저장
-    if (newRecords.length > 0) {
-      const { error: deleteError } = await supabase
-        .from('student_logs')
-        .delete()
-        .neq('id', 0);
-
-      if (deleteError) throw deleteError;
-
-      const { error: insertError } = await supabase.from('student_logs').insert(newRecords);
-      if (insertError) throw insertError;
+    if (newRecords.length === 0) {
+      return NextResponse.json(
+        { error: '시트에서 데이터를 찾지 못했습니다. 시트 공유 설정(링크가 있는 모든 사용자 뷰어)과 시트 탭 이름을 확인해 주세요.' },
+        { status: 400 }
+      );
     }
+
+    // 4. 기존 데이터 교체 저장
+    const { error: deleteError } = await supabase.from('student_logs').delete().neq('id', 0);
+    if (deleteError) throw deleteError;
+
+    const { error: insertError } = await supabase.from('student_logs').insert(newRecords);
+    if (insertError) throw insertError;
 
     return NextResponse.json({
       success: true,
